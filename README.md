@@ -47,6 +47,26 @@ cmake .. -G"Unix Makefiles" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=RelWithD
 make -j4
 ```
 
+With OpenCL:
+
+```bash
+mkdir build
+cd build
+cmake .. -G"Unix Makefiles" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-O3 -g" -DCMAKE_CXX_FLAGS="-Wall -funroll-loops -march=native"
+cmake .. -DENABLE_MURB_OCL=ON
+make -j4
+```
+
+With CUDA:
+
+```bash
+mkdir build
+cd build
+cmake .. -G"Unix Makefiles" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-O3 -g" -DCMAKE_CXX_FLAGS="-Wall -funroll-loops -march=native"
+cmake .. -DENABLE_MURB_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=native -DCMAKE_CUDA_FLAGS="-Xptxas -O3 -Xcompiler -march=native -Xcompiler -funroll-loops -Xcompiler -O3"
+make -j4
+```
+
 ## Run the code
 
 Run 1000 bodies (`-n`) during 1000 iterations (`-i`) and enable the verbose mode 
