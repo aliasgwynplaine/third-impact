@@ -1,5 +1,17 @@
 # MoveUrBody (`MUrB`), a n-body code
 
+## third impact schedule
+
+- [ ] Sequential. SimulationNBodyOptim. Barnes-Hut.
+- [ ] SIMD. SimulationNBodySIMD. MIPP
+- [ ] MultiThreading. SimulationNBodyOpenMP
+- [ ] GPU. SimulationNBodyGPU
+- [ ] Multi-node. SimulationNBodyMPI
+- [ ] Heterogeneous. SimulationNBodyHetero
+- [ ] Initial Conditions.
+- [ ] CSV Test
+
+
 This is a n-body code that simulates the Newtonian gravity equations.
 
 ## How to compile and run the code
