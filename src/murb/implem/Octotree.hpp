@@ -85,13 +85,11 @@ public :
     void insert(const unsigned long &iBody, const T &im, const T &qix, const T &qiy, const T &qiz)
     {   
         if (n >= 1) {
-            //std::cout<<"insert >= 1"<<std::endl;
             int xidx = qix > cx;
             int yidx = qiy > cy;
             int zidx = qiz > cz;
 
             if (n == 1) {
-                //std::cout<<"going..."<<xidx<<" "<<yidx<<" "<<zidx<<std::endl;
                 create_children();
                 child[xidx][yidx][zidx]->insert(iBody, im, qix, qiy, qiz);
 
@@ -99,22 +97,11 @@ public :
                 yidx = y > cy;
                 zidx = z > cz;
 
-                /*
-                c_xmin = xidx * xmin + (1 - xidx) * cx;
-                c_ymin = yidx * ymin + (1 - yidx) * cy;
-                c_zmin = zidx * zmin + (1 - zidx) * cz;
-                c_xmax = xidx * cx + (1 - xidx) * xmax;
-                c_ymax = yidx * cy + (1 - yidx) * ymax;
-                c_zmax = zidx * cz + (1 - zidx) * zmax;
-                */
-
                 child[xidx][yidx][zidx]->insert(body, m, x, y, z);
             } else {
-                //std::cout<<"insert else != 1"<<std::endl;
                 child[xidx][yidx][zidx]->insert(iBody, im, qix, qiy, qiz);
             }
         } else {
-            //std::cout<<"else: empty. Storing..."<<std::endl;
             empty = false;
             body = iBody;
             x = qix;
