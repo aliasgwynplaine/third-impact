@@ -2,7 +2,7 @@
 
 ## third impact schedule
 
-- [ ] Sequential. SimulationNBodyOptim. Barnes-Hut.
+- [x] Sequential. SimulationNBodyOptim. Barnes-Hut.
 - [ ] SIMD. SimulationNBodySIMD. MIPP
 - [ ] MultiThreading. SimulationNBodyOpenMP
 - [ ] GPU. SimulationNBodyGPU

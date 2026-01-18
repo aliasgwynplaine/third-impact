@@ -43,8 +43,6 @@ void SimulationNBodyOptim::initIteration()
         zmax = zmax >= d[iBody].qz ? zmax : d[iBody].qz;
     }
 
-    //std::cout<<"pmin: "<<xmin<<" "<<ymin<<" "<<zmin<<std::endl;
-    //std::cout<<"pmax: "<<xmax<<" "<<ymax<<" "<<zmax<<std::endl;
     this->root = new Octotree<float>(xmin, ymin, zmin, xmax, ymax, zmax, 0, theta);
 }
 
