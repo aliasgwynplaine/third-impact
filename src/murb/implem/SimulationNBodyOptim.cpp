@@ -6,10 +6,11 @@
 #include <string>
 
 #include "SimulationNBodyOptim.hpp"
+#include "third_impact_macros.hpp"
 
 SimulationNBodyOptim::SimulationNBodyOptim(const unsigned long nBodies, const std::string &scheme, const float soft,
-                                           const unsigned long randInit, const float theta)
-    : SimulationNBodyInterface(nBodies, scheme, soft, randInit), theta(theta)
+                                           const unsigned long randInit)
+    : SimulationNBodyInterface(nBodies, scheme, soft, randInit)
 {
     this->flopsPerIte = 20.f * (float)this->getBodies().getN() * (float)this->getBodies().getN();
     this->accelerations.resize(this->getBodies().getN());
@@ -17,47 +18,45 @@ SimulationNBodyOptim::SimulationNBodyOptim(const unsigned long nBodies, const st
 
 void SimulationNBodyOptim::initIteration()
 {
-    const std::vector<dataAoS_t<float>> &d = this->getBodies().getDataAoS();
-    float xmin, ymin, zmin;
-    float xmax, ymax, zmax;
-
-    xmin = xmax = d[0].qx;
-    ymin = ymax = d[0].qy;
-    zmin = zmax = d[0].qz;
-
-    this->accelerations[0].ax = 0.f;
-    this->accelerations[0].ay = 0.f;
-    this->accelerations[0].az = 0.f;
-
-    for (unsigned long iBody = 1; iBody < this->getBodies().getN(); iBody++) {
+    for (unsigned long iBody = 0; iBody < this->getBodies().getN(); iBody++) {
         this->accelerations[iBody].ax = 0.f;
         this->accelerations[iBody].ay = 0.f;
         this->accelerations[iBody].az = 0.f;
-
-        xmin = xmin <= d[iBody].qx ? xmin : d[iBody].qx;
-        ymin = ymin <= d[iBody].qy ? ymin : d[iBody].qy;
-        zmin = zmin <= d[iBody].qz ? zmin : d[iBody].qz;
-
-        xmax = xmax >= d[iBody].qx ? xmax : d[iBody].qx;
-        ymax = ymax >= d[iBody].qy ? ymax : d[iBody].qy;
-        zmax = zmax >= d[iBody].qz ? zmax : d[iBody].qz;
     }
-
-    this->root = new Octotree<float>(xmin, ymin, zmin, xmax, ymax, zmax, 0, theta);
 }
 
 void SimulationNBodyOptim::computeBodiesAcceleration()
 {
     const std::vector<dataAoS_t<float>> &d = this->getBodies().getDataAoS();
-    
-    for (unsigned long iBody = 0; iBody < this->getBodies().getN(); iBody++) {
-        this->root->insert(iBody, d[iBody].m, d[iBody].qx, d[iBody].qy, d[iBody].qz);
-    }
+    const float softSquared = SQUARE(this->soft);
+    const float lG = this->G;
+    const long N = this->getBodies().getN();
+    std::vector<accAoS_t<float>> &laccelerations = this->accelerations;
 
-    this->root->computeMass();
+    for (unsigned long iBody = 0; iBody < N; iBody++) {
+        for (unsigned long jBody = iBody + 1; jBody < N; jBody++) {
+            const float rijx = d[jBody].qx - d[iBody].qx; // 1 flop
+            const float rijy = d[jBody].qy - d[iBody].qy; // 1 flop
+            const float rijz = d[jBody].qz - d[iBody].qz; // 1 flop
 
-    for (unsigned long iBody = 0; iBody < this->getBodies().getN(); iBody++) {
-        this->root->computeAcc(d[iBody].qx, d[iBody].qy, d[iBody].qz, soft, G, this->accelerations[iBody]);
+            // compute the || rij ||² distance between body i and body j
+            const float rijSquared = SQUARE(rijx) + SQUARE(rijy) + SQUARE(rijz); // 5 flops
+            // compute e²
+            // compute the acceleration value between body i and body j: || ai || = G.mj / (|| rij ||² + e²)^{3/2}
+            const float rps = std::pow(rijSquared + softSquared, 3.f / 2.f);
+            const float ai = lG * d[jBody].m / rps; // 5 flops
+            const float aj = lG * d[iBody].m / rps;
+
+            // add the acceleration value into the acceleration vector: ai += || ai ||.rij
+            laccelerations[iBody].ax += ai * rijx; // 2 flops
+            laccelerations[iBody].ay += ai * rijy; // 2 flops
+            laccelerations[iBody].az += ai * rijz; // 2 flops
+
+            laccelerations[jBody].ax -= aj * rijx; // 2 flops
+            laccelerations[jBody].ay -= aj * rijy; // 2 flops
+            laccelerations[jBody].az -= aj * rijz; // 2 flops
+
+        }
     }
 }
 
@@ -67,5 +66,4 @@ void SimulationNBodyOptim::computeOneIteration()
     this->computeBodiesAcceleration();
     // time integration
     this->bodies.updatePositionsAndVelocities(this->accelerations, this->dt);
-    delete this->root;
 }
