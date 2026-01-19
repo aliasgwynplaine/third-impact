@@ -20,6 +20,7 @@
 
 #include "implem/SimulationNBodyNaive.hpp"
 #include "implem/SimulationNBodyOptim.hpp"
+#include "implem/SimulationNBodyBarnesHut.hpp"
 
 /* global variables */
 unsigned long NBodies;               /*!< Number of bodies. */
@@ -187,9 +188,10 @@ SimulationNBodyInterface *createImplem()
         simu = new SimulationNBodyNaive(NBodies, BodiesScheme, Softening);
     }
     else if(ImplTag == "cpu+optim") {
-        simu = new SimulationNBodyOptim(NBodies, BodiesScheme, Softening, 1.5f);
-    }
-    else {
+        simu = new SimulationNBodyOptim(NBodies, BodiesScheme, Softening);
+    } else if(ImplTag == "cpu+barneshut") {
+        simu = new SimulationNBodyBarnesHut(NBodies, BodiesScheme, Softening, 1.5f);
+    } else {
         std::cout << "Implementation '" << ImplTag << "' does not exist... Exiting." << std::endl;
         exit(-1);
     }

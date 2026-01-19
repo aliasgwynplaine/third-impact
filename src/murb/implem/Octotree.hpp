@@ -2,7 +2,7 @@
 #define THIRD_IMPACT_OCTOTREE_HPP_
 
 #include <vector>
-
+#include "third_impact_macros.hpp"
 #include "core/Bodies.hpp"
 
 template <typename T> class Octotree {
@@ -162,16 +162,16 @@ public :
         const float soft_squared = soft * soft;
 
         if (n == 1) {
-            const float ai = G * total_m / std::pow(r_squared + soft_squared, 3.f / 2.f);
+            const float ai = G * total_m * POW3(FAST_RSQRT(r_squared + soft_squared));
 
             acc.ax += ai * rx;
             acc.ay += ai * ry;
             acc.az += ai * rz;
         } else {
-            const float r = std::sqrt(r_squared);
+            const float r = r_squared * FAST_RSQRT(r_squared);
 
             if (size / r < theta) {
-                const float ai = G * total_m / std::pow(r_squared + soft_squared, 3.f / 2.f);
+                const float ai = G * total_m * POW3(FAST_RSQRT(r_squared + soft_squared));
                 
                 acc.ax += ai * rx;
                 acc.ay += ai * ry;

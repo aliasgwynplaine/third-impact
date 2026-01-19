@@ -15,13 +15,13 @@
 
 // this can be fast but not so accurate uu
 #define FAST_POW(a, b) ({   \
-    union {                   \
-        double d;               \
-        int x[2];               \
-    } u = { a };              \
+    union {                 \
+        double d;           \
+        int x[2];           \
+    } u = { a };            \
     u.x[1] = (int)(b * (u.x[1] - 1072632447) + 1072632447); \
-    u.x[0] = 0;               \
-    u.d;                      \
+    u.x[0] = 0;             \
+    u.d;                    \
 })
 
 
