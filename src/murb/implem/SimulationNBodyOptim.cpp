@@ -30,28 +30,33 @@ void SimulationNBodyOptim::computeBodiesAcceleration()
     const std::vector<dataAoS_t<float>> &d = this->getBodies().getDataAoS();
     const float softSquared = SQUARE(this->soft);
     const float lG = this->G;
-    const long N = this->getBodies().getN();
+    const unsigned long N = this->getBodies().getN();
     std::vector<accAoS_t<float>> &laccelerations = this->accelerations;
 
     for (unsigned long iBody = 0; iBody < N; iBody++) {
+        float im = d[iBody].m;
+        float iqx = d[iBody].qx;
+        float iqy = d[iBody].qy;
+        float iqz = d[iBody].qz;
+
         for (unsigned long jBody = iBody + 1; jBody < N; jBody++) {
-            const float rijx = d[jBody].qx - d[iBody].qx; // 1 flop
-            const float rijy = d[jBody].qy - d[iBody].qy; // 1 flop
-            const float rijz = d[jBody].qz - d[iBody].qz; // 1 flop
+            float rijx = d[jBody].qx - iqx; // 1 flop
+            float rijy = d[jBody].qy - iqy; // 1 flop
+            float rijz = d[jBody].qz - iqz; // 1 flop
 
             // compute the || rij ||² distance between body i and body j
-            const float rijSquared = SQUARE(rijx) + SQUARE(rijy) + SQUARE(rijz); // 5 flops
-            // compute e²
+            float rijSquared_softSquared = SQUARE(rijx) + SQUARE(rijy) + SQUARE(rijz) + softSquared; // 5 flops
             // compute the acceleration value between body i and body j: || ai || = G.mj / (|| rij ||² + e²)^{3/2}
-            const float rps = std::pow(rijSquared + softSquared, 3.f / 2.f);
-            const float ai = lG * d[jBody].m / rps; // 5 flops
-            const float aj = lG * d[iBody].m / rps;
+            float Gxinvrps = lG / std::pow(rijSquared_softSquared, 3.f / 2.f);
+            float ai = Gxinvrps * d[jBody].m;
+            float aj = Gxinvrps * im;
 
             // add the acceleration value into the acceleration vector: ai += || ai ||.rij
             laccelerations[iBody].ax += ai * rijx; // 2 flops
             laccelerations[iBody].ay += ai * rijy; // 2 flops
             laccelerations[iBody].az += ai * rijz; // 2 flops
 
+            // apply Newton's third law. Thanks Ivan :D
             laccelerations[jBody].ax -= aj * rijx; // 2 flops
             laccelerations[jBody].ay -= aj * rijy; // 2 flops
             laccelerations[jBody].az -= aj * rijz; // 2 flops
