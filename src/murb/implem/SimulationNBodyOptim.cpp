@@ -19,7 +19,9 @@ SimulationNBodyOptim::SimulationNBodyOptim(const unsigned long nBodies, const st
 
 void SimulationNBodyOptim::initIteration()
 {
-    for (unsigned long iBody = 0; iBody < this->getBodies().getN(); iBody++) {
+    unsigned long N = this->getBodies().getN();
+
+    for (unsigned long iBody = 0; iBody < N; iBody++) {
         this->accelerations[iBody].ax = 0.f;
         this->accelerations[iBody].ay = 0.f;
         this->accelerations[iBody].az = 0.f;
@@ -50,7 +52,7 @@ void SimulationNBodyOptim::computeBodiesAcceleration()
             // compute the || rij ||² + e²
             float rijSquared_softSquared = SQUARE(rijx) + SQUARE(rijy) + SQUARE(rijz) + softSquared; // 7 flops
             // compute G / (|| rij ||² + e²)^{3/2}
-            float Gxinvrps = lG / std::pow(rijSquared_softSquared, 3.f / 2.f); // 3 flops
+            float Gxinvrps = lG * POW3(FAST_RSQRT(rijSquared_softSquared)); // 2 flops
             // compute the acceleration value between body i and body j: || ai || = G.mj / (|| rij ||² + e²)^{3/2}
             float ai = Gxinvrps * d[jBody].m; // 1 flops
             // compute the acceleration value between body j and body i: || aj || = G.mi / (|| rij ||² + e²)^{3/2}
