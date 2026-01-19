@@ -12,7 +12,8 @@ SimulationNBodyOptim::SimulationNBodyOptim(const unsigned long nBodies, const st
                                            const unsigned long randInit)
     : SimulationNBodyInterface(nBodies, scheme, soft, randInit)
 {
-    this->flopsPerIte = 20.f * (float)this->getBodies().getN() * (float)this->getBodies().getN();
+    float N = (float)this->getBodies().getN();
+    this->flopsPerIte = 0.5f * 27.f * ((N - 1) * (N - 2));
     this->accelerations.resize(this->getBodies().getN());
 }
 
@@ -28,28 +29,32 @@ void SimulationNBodyOptim::initIteration()
 void SimulationNBodyOptim::computeBodiesAcceleration()
 {
     const std::vector<dataAoS_t<float>> &d = this->getBodies().getDataAoS();
-    const float softSquared = SQUARE(this->soft);
+    const float softSquared = SQUARE(this->soft); // 1 flop
     const float lG = this->G;
     const unsigned long N = this->getBodies().getN();
     std::vector<accAoS_t<float>> &laccelerations = this->accelerations;
 
+    // (n² + 3 * n + 2) * 27 / 2 flops
     for (unsigned long iBody = 0; iBody < N; iBody++) {
-        float im = d[iBody].m;
+        float im  = d[iBody].m;
         float iqx = d[iBody].qx;
         float iqy = d[iBody].qy;
         float iqz = d[iBody].qz;
 
+        // (i - 1) * 27 flops 
         for (unsigned long jBody = iBody + 1; jBody < N; jBody++) {
             float rijx = d[jBody].qx - iqx; // 1 flop
             float rijy = d[jBody].qy - iqy; // 1 flop
             float rijz = d[jBody].qz - iqz; // 1 flop
 
-            // compute the || rij ||² distance between body i and body j
-            float rijSquared_softSquared = SQUARE(rijx) + SQUARE(rijy) + SQUARE(rijz) + softSquared; // 5 flops
+            // compute the || rij ||² + e²
+            float rijSquared_softSquared = SQUARE(rijx) + SQUARE(rijy) + SQUARE(rijz) + softSquared; // 7 flops
+            // compute G / (|| rij ||² + e²)^{3/2}
+            float Gxinvrps = lG / std::pow(rijSquared_softSquared, 3.f / 2.f); // 3 flops
             // compute the acceleration value between body i and body j: || ai || = G.mj / (|| rij ||² + e²)^{3/2}
-            float Gxinvrps = lG / std::pow(rijSquared_softSquared, 3.f / 2.f);
-            float ai = Gxinvrps * d[jBody].m;
-            float aj = Gxinvrps * im;
+            float ai = Gxinvrps * d[jBody].m; // 1 flops
+            // compute the acceleration value between body j and body i: || aj || = G.mi / (|| rij ||² + e²)^{3/2}
+            float aj = Gxinvrps * im; // 1 flops
 
             // add the acceleration value into the acceleration vector: ai += || ai ||.rij
             laccelerations[iBody].ax += ai * rijx; // 2 flops
