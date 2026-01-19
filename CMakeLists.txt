@@ -9,7 +9,8 @@ option (ENABLE_VISU      "Enable the OpenGL visualization"              ON )
 option (ENABLE_TEST      "Enable test program to validate MUrB kernels" ON )
 option (ENABLE_MURB_OMP  "Enable to compile the MUrB OMP executable"    ON )
 option (ENABLE_MURB_OCL  "Enable to compile the MUrB OCL executable"    OFF)
-option (ENABLE_MURB_CUDA "Enable to compile MUsB CUDA executable"       OFF)
+option (ENABLE_MURB_CUDA "Enable to compile the MUrB CUDA executable"   OFF)
+option (ENABLE_MURB_MPI  "Enable to compile the MUrB MPI executable"    OFF)
 
 if (NOT ENABLE_MURB)
     message("ENABLE_TEST has been switched OFF because ENABLE_MURB is disabled.")
@@ -23,6 +24,7 @@ message(STATUS "  * ENABLE_TEST: '${ENABLE_TEST}'")
 message(STATUS "  * ENABLE_MURB_OMP: '${ENABLE_MURB_OMP}'")
 message(STATUS "  * ENABLE_MURB_OCL: '${ENABLE_MURB_OCL}'")
 message(STATUS "  * ENABLE_MURB_CUDA: '${ENABLE_MURB_CUDA}'")
+message(STATUS "  * ENABLE_MURB_MPI: '${ENABLE_MURB_MPI}'")
 message(STATUS "MUrB info: ")
 message(STATUS "  * CMAKE_BUILD_TYPE: '${CMAKE_BUILD_TYPE}'")
 
@@ -174,7 +176,19 @@ if ((ENABLE_MURB_OCL) AND (ENABLE_MURB))
     endif (OpenCL_FOUND)
 endif ()
 
+if ((ENABLE_MURB_MPI) AND (ENABLE_MURB))
+    # Enable MPI
+    targets_compile_definitions("${murb_targets_list}" PRIVATE USE_MPI)
+
+    find_package (MPI REQUIRED)
+    if (MPI_CXX_FOUND)
+        message(STATUS "MPI found")
+        targets_link_libraries("${murb_targets_list}" PUBLIC MPI::MPI_CXX)
+    endif (MPI_CXX_FOUND)
+endif ()
+
 if ((ENABLE_MURB_CUDA) AND (ENABLE_MURB))
     targets_compile_definitions("${murb_targets_list}" PRIVATE USE_CUDA)
 endif ()
+
 
