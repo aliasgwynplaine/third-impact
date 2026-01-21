@@ -42,6 +42,7 @@ void SimulationNBodyOptim::computeBodiesAcceleration()
         float iqx = d[iBody].qx;
         float iqy = d[iBody].qy;
         float iqz = d[iBody].qz;
+        accAoS_t<float> &acc = laccelerations[iBody];
 
         // (i - 1) * 27 flops 
         for (unsigned long jBody = iBody + 1; jBody < N; jBody++) {
@@ -59,9 +60,9 @@ void SimulationNBodyOptim::computeBodiesAcceleration()
             float aj = Gxinvrps * im; // 1 flops
 
             // add the acceleration value into the acceleration vector: ai += || ai ||.rij
-            laccelerations[iBody].ax += ai * rijx; // 2 flops
-            laccelerations[iBody].ay += ai * rijy; // 2 flops
-            laccelerations[iBody].az += ai * rijz; // 2 flops
+            acc.ax += ai * rijx; // 2 flops
+            acc.ay += ai * rijy; // 2 flops
+            acc.az += ai * rijz; // 2 flops
 
             // apply Newton's third law. Thanks Ivan :D
             laccelerations[jBody].ax -= aj * rijx; // 2 flops
