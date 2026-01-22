@@ -186,8 +186,9 @@ SimulationNBodyInterface *createImplem()
     SimulationNBodyInterface *simu = nullptr;
     if (ImplTag == "cpu+naive") {
         simu = new SimulationNBodyNaive(NBodies, BodiesScheme, Softening);
-    }
-    else if(ImplTag == "cpu+optim") {
+    }else if(ImplTag == "cpu+simd") {
+	simu = new SimulationNBodySIMD(NBodies, BodiesScheme, Softening);
+    }else if(ImplTag == "cpu+optim") {
         simu = new SimulationNBodyOptim(NBodies, BodiesScheme, Softening);
     } else if(ImplTag == "cpu+barneshut") {
         simu = new SimulationNBodyBarnesHut(NBodies, BodiesScheme, Softening, 1.5f);
