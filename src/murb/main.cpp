@@ -19,6 +19,7 @@
 #include "utils/Perf.hpp"
 
 #include "implem/SimulationNBodyNaive.hpp"
+#include "implem/SimulationNBodySIMD.hpp"
 #include "implem/SimulationNBodyOptim.hpp"
 #include "implem/SimulationNBodyBarnesHut.hpp"
 
