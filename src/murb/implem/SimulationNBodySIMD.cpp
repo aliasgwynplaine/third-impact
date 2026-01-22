@@ -16,6 +16,10 @@ SimulationNBodySIMD::SimulationNBodySIMD(const unsigned long nBodies, const std:
     this->flopsPerIte = 20.f * (float)this->getBodies().getN() * (float)this->getBodies().getN();
 
     //TODO : need to allocate the ax ay and az
+    this->vAccelerations.ax.resize(this->getBodies().getN());
+    this->vAccelerations.ay.resize(this->getBodies().getN());
+    this->vAccelerations.az.resize(this->getBodies().getN());
+
 }
 
 void SimulationNBodySIMD::initIteration()
@@ -28,50 +32,59 @@ void SimulationNBodySIMD::initIteration()
 void SimulationNBodySIMD::computeBodiesAcceleration()
 {
     const dataSoA_t<float> &d = this->getBodies().getDataSoA();
-
-    mipp::Reg<float> vG = this->G;
-
-    mipp::Reg<float> vSoftSquared = this->soft * this->soft;
 	
 
-    //sum var    
+    //const in Reg
+    mipp::Reg<float> vG = this->G;
+    mipp::Reg<float> vSoftSquared = this->soft * this->soft;
+	
+    //sum registers    
     float qx_sum = 0.f, qy_sum = 0.f, qz_sum = 0.f;
 
+    //init Registers here for readability and optimisation?
+    mipp::Reg<float> vqxi, vqxj, vqx;
+    mipp::Reg<float> vqyi, vqyj, vqy;
+    mipp::Reg<float> vqzi, vqzj, vqz;
+    mipp::Reg<float> vmj;
+    mipp::Reg<float> vRijSquared, rsqrt_cubed, vAi;
+    mipp::Reg<float> vAccx, vAccy, vAccz;
+    
+    
     for (unsigned long iBody = 0; iBody < this->getBodies().getN(); iBody += this->floatN) {
        
 	//load i positions 
-	mipp::Reg<float> vqxi = d.qx[iBody];
-	mipp::Reg<float> vqyi = d.qy[iBody];
-	mipp::Reg<float> vqzi = d.qz[iBody];
+	vqxi = d.qx[iBody];
+	vqyi = d.qy[iBody];
+	vqzi = d.qz[iBody];
 	
 	for(unsigned long jBody = 0; jBody < this->getBodies().getN(); jBody++){
 
 		//load j positions and calculate distance	
-		mipp::Reg<float> vqxj = d.qx[jBody];
-		mipp::Reg<float> vqx = vqxj - vqxi;
+		vqxj = d.qx[jBody];
+		vqx = vqxj - vqxi;
 
-		mipp::Reg<float> vqyj = d.qy[jBody];
-		mipp::Reg<float> vqy = vqyj - vqyi;
+		vqyj = d.qy[jBody];
+		vqy = vqyj - vqyi;
 		
-		mipp::Reg<float> vqzj = d.qz[jBody];
-		mipp::Reg<float> vqz = vqzj - vqzi;
+		vqzj = d.qz[jBody];
+		vqz = vqzj - vqzi;
 		
 		//load j mass
-		mipp::Reg<float> vmj = d.m[jBody];
+		vmj = d.m[jBody];
 
 		
-		mipp::Reg<float> vRijSquared = vqx*vqx + vqy*vqy + vqz*vqz;
+		vRijSquared = vqx*vqx + vqy*vqy + vqz*vqz;
 
 
 		// (1/sqrt(vRijSquared + vSoftSquared))^(3) = (vRijSquared + vSoftSquared)^(3/2)
-		mipp::Reg<float> rsqrt_cubed = rsqrt(vRijSquared + vSoftSquared);
+		rsqrt_cubed = rsqrt(vRijSquared + vSoftSquared);
 		rsqrt_cubed = rsqrt_cubed * rsqrt_cubed * rsqrt_cubed;
 
-		mipp::Reg<float> vAi = vG * vmj / rsqrt_cubed;
+		vAi = vG * vmj / rsqrt_cubed;
 	
-		mipp::Reg<float> vAccx = vAi * vqx;
-		mipp::Reg<float> vAccy = vAi * vqy;
-		mipp::Reg<float> vAccz = vAi * vqz;
+		vAccx = vAi * vqx;
+		vAccy = vAi * vqy;
+		vAccz = vAi * vqz;
 
 		qx_sum = mipp::sum(vAccx);
 		qy_sum = mipp::sum(vAccy);
