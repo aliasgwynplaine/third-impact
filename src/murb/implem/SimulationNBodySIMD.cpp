@@ -1,5 +1,3 @@
-#include <mipp.h>
-
 #include <cassert>
 #include <cmath>
 #include <fstream>

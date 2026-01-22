@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include <mipp.h>
+
 #include "core/SimulationNBodyInterface.hpp"
 
 class SimulationNBodySIMD : public SimulationNBodyInterface {
