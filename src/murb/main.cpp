@@ -21,6 +21,7 @@
 #include "implem/SimulationNBodyNaive.hpp"
 #include "implem/SimulationNBodySIMD.hpp"
 #include "implem/SimulationNBodyOptim.hpp"
+#include "implem/SimulationNBodyOpenMP.hpp"
 #include "implem/SimulationNBodyBarnesHut.hpp"
 
 /* global variables */
@@ -187,12 +188,14 @@ SimulationNBodyInterface *createImplem()
     SimulationNBodyInterface *simu = nullptr;
     if (ImplTag == "cpu+naive") {
         simu = new SimulationNBodyNaive(NBodies, BodiesScheme, Softening);
-    }else if(ImplTag == "cpu+simd") {
+    } else if(ImplTag == "cpu+simd") {
 	simu = new SimulationNBodySIMD(NBodies, BodiesScheme, Softening);
-    }else if(ImplTag == "cpu+optim") {
+    } else if(ImplTag == "cpu+optim") {
         simu = new SimulationNBodyOptim(NBodies, BodiesScheme, Softening);
     } else if(ImplTag == "cpu+barneshut") {
         simu = new SimulationNBodyBarnesHut(NBodies, BodiesScheme, Softening, 1.5f);
+    } else if(ImplTag == "cpu+omp") {
+        simu = new SimulationNBodyOpenMP(NBodies, BodiesScheme, Softening);
     } else {
         std::cout << "Implementation '" << ImplTag << "' does not exist... Exiting." << std::endl;
         exit(-1);
