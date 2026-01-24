@@ -67,7 +67,7 @@ void SimulationNBodyBarnesHutOMP::computeBodiesAcceleration()
     child[6] = this->root->child[1][0][1];
     child[7] = this->root->child[1][1][1];
 
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(runtime)
     for (int i = 0; i < 8; i++) {
         child[i]->computeCM();
     }
@@ -102,7 +102,7 @@ void SimulationNBodyBarnesHutOMP::updatePositionsAndVelocities() {
     float *vz = const_cast<float*>(dsoa.vz.data());
     std::vector<accAoS_t<float>> &lacc = this->accelerations;
 
-    #pragma omp parallel for firstprivate(n, dt)
+    #pragma omp parallel for schedule(runtime) firstprivate(n, dt)
     for (unsigned long i = 0; i < n; i++) {
         float axdt = lacc[i].ax * dt;
         float aydt = lacc[i].ay * dt;

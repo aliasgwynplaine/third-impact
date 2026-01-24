@@ -22,7 +22,7 @@ void SimulationNBodyOpenMP::initIteration()
 {
     unsigned long N = this->getBodies().getN();
 
-    #pragma omp parallel for firstprivate(N)
+    #pragma omp parallel for schedule(runtime) firstprivate(N)
     for (unsigned long iBody = 0; iBody < N; iBody++) {
         this->accelerations[iBody].ax = 0.f;
         this->accelerations[iBody].ay = 0.f;
@@ -42,7 +42,7 @@ void SimulationNBodyOpenMP::computeBodiesAcceleration()
     {
     accAoS_t<float> *acc_priv = (accAoS_t<float> *)calloc(N, sizeof(accAoS_t<float>));
 
-    #pragma omp for
+    #pragma omp for schedule(runtime)
     for (unsigned long iBody = 0; iBody < N; iBody++) {
         float im  = d[iBody].m;
         float iqx = d[iBody].qx;
@@ -102,7 +102,7 @@ void SimulationNBodyOpenMP::updatePositionsAndVelocities() {
     float *vz = const_cast<float*>(dsoa.vz.data());
     std::vector<accAoS_t<float>> &lacc = this->accelerations;
 
-    #pragma omp parallel for firstprivate(n, dt)
+    #pragma omp parallel for schedule(runtime) firstprivate(n, dt)
     for (unsigned long i = 0; i < n; i++) {
         float axdt = lacc[i].ax * dt;
         float aydt = lacc[i].ay * dt;
