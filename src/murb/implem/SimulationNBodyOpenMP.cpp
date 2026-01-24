@@ -15,6 +15,7 @@ SimulationNBodyOpenMP::SimulationNBodyOpenMP(const unsigned long nBodies, const 
     float N = (float)this->getBodies().getN();
     this->flopsPerIte = 0.5f * 27.f * ((N - 1) * (N - 2));
     this->accelerations.resize(this->getBodies().getN());
+    initIteration();
 }
 
 void SimulationNBodyOpenMP::initIteration()
@@ -101,7 +102,7 @@ void SimulationNBodyOpenMP::updatePositionsAndVelocities() {
     float *vz = const_cast<float*>(dsoa.vz.data());
     std::vector<accAoS_t<float>> &lacc = this->accelerations;
 
-    #pragma omp parallel for
+    #pragma omp parallel for firstprivate(n, dt)
     for (unsigned long i = 0; i < n; i++) {
         float axdt = lacc[i].ax * dt;
         float aydt = lacc[i].ay * dt;
@@ -119,12 +120,17 @@ void SimulationNBodyOpenMP::updatePositionsAndVelocities() {
         daos[i].vx = vx[i];
         daos[i].vy = vy[i];
         daos[i].vz = vz[i];
+
+        // update the acc here so we won't use another loop
+        lacc[i].ax = 0.f;
+        lacc[i].ay = 0.f;
+        lacc[i].az = 0.f;
     }
 }
 
 void SimulationNBodyOpenMP::computeOneIteration()
 {
-    this->initIteration();
+    //this->initIteration();
     this->computeBodiesAcceleration();
     // time integration
     //this->bodies.updatePositionsAndVelocities(this->accelerations, this->dt);
