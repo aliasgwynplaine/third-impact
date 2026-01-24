@@ -23,6 +23,7 @@
 #include "implem/SimulationNBodyOptim.hpp"
 #include "implem/SimulationNBodyOpenMP.hpp"
 #include "implem/SimulationNBodyBarnesHut.hpp"
+#include "implem/SimulationNBodyBarnesHutOMP.hpp"
 
 /* global variables */
 unsigned long NBodies;               /*!< Number of bodies. */
@@ -196,6 +197,8 @@ SimulationNBodyInterface *createImplem()
         simu = new SimulationNBodyBarnesHut(NBodies, BodiesScheme, Softening, 1.5f);
     } else if(ImplTag == "cpu+omp") {
         simu = new SimulationNBodyOpenMP(NBodies, BodiesScheme, Softening);
+    } else if(ImplTag == "cpu+barneshut+omp") {
+        simu = new SimulationNBodyBarnesHutOMP(NBodies, BodiesScheme, Softening);
     } else {
         std::cout << "Implementation '" << ImplTag << "' does not exist... Exiting." << std::endl;
         exit(-1);
