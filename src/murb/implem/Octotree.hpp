@@ -4,48 +4,43 @@
 #include <vector>
 #include "third_impact_macros.hpp"
 #include "core/Bodies.hpp"
+#include <iostream>
 
-template <typename T> class Octotree {
-protected:
-    T cx;                        /*  coord x - center of octant */
-    T cy;                        /*  coord y - center of octant */
-    T cz;                        /*  coord z - center of octant */
-    T xmin;                      /*      coord x - lower corner */
-    T ymin;                      /*      coord y - lower corner */
-    T zmin;                      /*      coord z - lower corner */
-    T xmax;                      /*      coord x - upper corner */
-    T ymax;                      /*      coord y - upper corner */
-    T zmax;                      /*      coord z - upper corner */
-    T size;                      /*             size of the box */
-    T theta;                     /*                   tolerance */
-    T cmx;                       /*    coord x - center of mass */
-    T cmy;                       /*    coord y - center of mass */
-    T cmz;                       /*    coord z - center of mass */
-    T total_m;                   /*      total mass of the node */
-    bool empty;                  /*      true if noeud is empty */
-    int depth;                   /*     depth of the sub-octree */
-    int n;                       /*            number of bodies */
-    int body;                    /*            body in the leaf */
-    T x;                         /* cache for the body position */
-    T y;                         /* cache for the body position */
-    T z;                         /* cache for the body position */
-    T m;                         /*     cache for the body mass */
-    Octotree<T> *child[2][2][2]; /*              children x y z */
+typedef struct Octotree Octotree;
 
-public :
-    Octotree(const T xmin, const T ymin, const T zmin, const T xmax, const T ymax, const T zmax, const int depth, const T theta) /* constructor */
-    : xmin(xmin), ymin(ymin), zmin(zmin), xmax(xmax), ymax(ymax), zmax(zmax), depth(depth), theta(theta)
+// this struct is for the stack
+struct octostack {
+    Octotree *d;
+    bool v;
+};
+
+struct Octotree {
+    float cx, cy, cz;          /*   coords - center of octant */
+    float xmin, ymin, zmin;    /*       coords - lower corner */
+    float xmax, ymax, zmax;    /*       coords - upper corner */
+    float size;                /*             size of the box */
+    float theta;               /*                   tolerance */
+    float cmx, cmy, cmz;       /*     coords - center of mass */
+    float m;                   /*       total mass in the box */
+    int n;                     /* number of bodies in the box */
+    int body;                  /*            body in the leaf */
+    struct Octotree *child[2][2][2];  /*       child in octant 0bxyz */
+
+    Octotree(const float xmin, const float ymin, const float zmin, 
+             const float xmax, const float ymax, const float zmax, 
+             const float theta) /* constructor */
+    : xmin(xmin), ymin(ymin), zmin(zmin), 
+      xmax(xmax), ymax(ymax), zmax(zmax), theta(theta)
     {
-        this->cx = (xmax + xmin) / 2;
-        this->cy = (ymax + ymin) / 2;
-        this->cz = (zmax + zmin) / 2;
-        this->empty = true;
-        this->total_m = -1;
+        this->cx = (xmax + xmin) * 0.5f;
+        this->cy = (ymax + ymin) * 0.5f;
+        this->cz = (zmax + zmin) * 0.5f;
+        this->m = 0;
         this->n = 0;
 
-        T dx = xmax - xmin;
-        T dy = ymax - ymin;
-        T dz = zmax - zmin;
+        float dx = xmax - xmin;
+        float dy = ymax - ymin;
+        float dz = zmax - zmin;
         this->size = (dx * dx + dy * dy + dz * dz) / 1.732050808f; // sqrt(3)
     }
 
@@ -71,18 +66,19 @@ public :
 
     void create_children()
     {
-        child[0][0][0] = new Octotree(xmin, ymin, zmin, cx, cy, cz, depth + 1, theta);
-        child[0][1][0] = new Octotree(xmin, cy, zmin, cx, ymax, cz, depth + 1, theta);
-        child[1][0][0] = new Octotree(cx, ymin, zmin, xmax, cy, cz, depth + 1, theta);
-        child[1][1][0] = new Octotree(cx, cy, zmin, xmax, ymax, cz, depth + 1, theta);
+        child[0][0][0] = new Octotree(xmin, ymin, zmin, cx, cy, cz, theta);
+        child[0][1][0] = new Octotree(xmin, cy, zmin, cx, ymax, cz, theta);
+        child[1][0][0] = new Octotree(cx, ymin, zmin, xmax, cy, cz, theta);
+        child[1][1][0] = new Octotree(cx, cy, zmin, xmax, ymax, cz, theta);
         
-        child[0][0][1] = new Octotree(xmin, ymin, cz, cx, cy, zmax, depth + 1, theta);
-        child[0][1][1] = new Octotree(xmin, cy, cz, cx, ymin, zmax, depth + 1, theta);
-        child[1][0][1] = new Octotree(cx, ymin, cz, xmax, cy, zmax, depth + 1, theta);
-        child[1][1][1] = new Octotree(cx, cy, cz, xmax, ymax, zmax, depth + 1, theta);
+        child[0][0][1] = new Octotree(xmin, ymin, cz, cx, cy, zmax, theta);
+        child[0][1][1] = new Octotree(xmin, cy, cz, cx, ymin, zmax, theta);
+        child[1][0][1] = new Octotree(cx, ymin, cz, xmax, cy, zmax, theta);
+        child[1][1][1] = new Octotree(cx, cy, cz, xmax, ymax, zmax, theta);
 
     }
-    void insert(const unsigned long &iBody, const T &im, const T &qix, const T &qiy, const T &qiz)
+    void insert(const unsigned long &iBody, const float &im, 
+        const float &qix, const float &qiy, const float &qiz)
     {   
         if (n >= 1) {
             int xidx = qix > cx;
@@ -93,20 +89,21 @@ public :
                 create_children();
                 child[xidx][yidx][zidx]->insert(iBody, im, qix, qiy, qiz);
 
-                xidx = x > cx;
-                yidx = y > cy;
-                zidx = z > cz;
-
-                child[xidx][yidx][zidx]->insert(body, m, x, y, z);
+                xidx = cmx > cx;
+                yidx = cmy > cy;
+                zidx = cmz > cz;
+                
+                child[xidx][yidx][zidx]->insert(body, m, cmx, cmy, cmz);
+                m += im;
             } else {
+                m += im;
                 child[xidx][yidx][zidx]->insert(iBody, im, qix, qiy, qiz);
             }
         } else {
-            empty = false;
             body = iBody;
-            x = qix;
-            y = qiy;
-            z = qiz;
+            cmx = qix;
+            cmy = qiy;
+            cmz = qiz;
             m = im;
         }
 
@@ -114,78 +111,117 @@ public :
     }
 
 
-    void computeMass()
+    void computeCM()
     {
-        if (empty) return;
+        if (n == 0) return;
 
-        if (n == 1) {
-            cmx = x;
-            cmy = y;
-            cmz = z;
-            total_m = m;
-        } else {
-            cmx = cmy = cmz = total_m = 0;
+        struct octostack *stack = new struct octostack[n];
+        int h = 0; // height of the stack
 
-            // TODO: CHECK UNROLLING 
-            for (int i = 0; i < 2; i++){
-                for (int j = 0; j < 2; j++){
-                    for (int k = 0; k < 2; k++) {
-                        Octotree *c = child[i][j][k];
-                        c->computeMass();
-                        float cmass = c->getTotalMass();
+        stack[h] = {this, false};
 
-                        if (cmass < 0) continue;
+        struct octostack curr;
 
-                        cmx += c->getCMX() * cmass;
-                        cmy += c->getCMY() * cmass;
-                        cmz += c->getCMZ() * cmass;
-                        total_m += cmass;
+        while (h > 0) {
+            curr = stack[--h];
+            Octotree *node = curr.d;
+
+            if (node->n == 1) continue;
+
+            if (!curr.v) {
+                curr.v = true;
+                stack[h++] = curr;
+
+                for (int i = 0; i < 2; i++) {
+                    for (int j = 0; j < 2; j++) {
+                        for (int k = 0; k < 2; k++) {
+                            Octotree *c = node->child[i][j][k];
+
+                            if (c->n > 0) 
+                                stack[h++] = {c, false};
+                        }
                     }
                 }
-            }
+            } else {
+                node->cmx = 0.f;
+                node->cmy = 0.f;
+                node->cmz = 0.f;
 
-            cmx /= total_m;
-            cmy /= total_m;
-            cmz /= total_m;
+                for (int i = 0; i < 2; i++) {
+                    for (int j = 0; j < 2; j++) {
+                        for (int k = 0; k < 2; k++) {
+                            Octotree *c = node->child[i][j][k];
+
+                            if (c->n == 0) continue;
+                            
+                            node->cmx += c->cmx * c->m;
+                            node->cmy += c->cmy * c->m;
+                            node->cmz += c->cmz * c->m;
+                        }
+                    }
+                }
+
+                float inv_m = 1.f / node->m;
+                node->cmx *= inv_m;
+                node->cmy *= inv_m;
+                node->cmz *= inv_m;
+            }
         }
+        delete[] stack;
     }
 
-    void computeAcc(const T &ix, const T &iy, const T &iz, const T &soft, const float &G, accAoS_t<T> &acc)
+    void computeAcc(const float &ix, const float &iy, const float &iz, 
+        const float &soft, const float &G, accAoS_t<float> &acc)
     {
-        if (empty) return;
+        if (n == 0) return;
 
-        const float rx = cmx - ix;
-        const float ry = cmy - iy;
-        const float rz = cmz - iz;
+        Octotree **stack = new Octotree*[n];
+        int h = 0;
+        stack[h++] = this;
 
-        const float r_squared = rx * rx + ry * ry + rz * rz;
-        const float soft_squared = soft * soft;
+        while (h > 0) {
+            Octotree *node = stack[--h];
 
-        if (n == 1) {
-            const float ai = G * total_m * POW3(FAST_RSQRT(r_squared + soft_squared));
+            if (node->n == 0) continue;
 
-            acc.ax += ai * rx;
-            acc.ay += ai * ry;
-            acc.az += ai * rz;
-        } else {
-            const float r = r_squared * FAST_RSQRT(r_squared);
+            const float rx = node->cmx - ix;
+            const float ry = node->cmy - iy;
+            const float rz = node->cmz - iz;
 
-            if (size / r < theta) {
-                const float ai = G * total_m * POW3(FAST_RSQRT(r_squared + soft_squared));
-                
+            const float r_squared = rx * rx + ry * ry + rz * rz;
+            const float soft_squared = soft * soft;
+
+            if (node->n == 1) {
+                const float ai = G * node->m * POW3(FAST_RSQRT(r_squared + soft_squared));
                 acc.ax += ai * rx;
                 acc.ay += ai * ry;
                 acc.az += ai * rz;
             } else {
-                for (int i = 0; i < 2; i++){
-                    for (int j = 0; j < 2; j++){
-                        for (int k = 0; k < 2; k++) {
-                            child[i][j][k]->computeAcc(ix, iy, iz, soft, G, acc);
+                const float r = r_squared * FAST_RSQRT(r_squared);
+    
+                if (node->size / r < node->theta) {
+                    const float ai = G * node->m * POW3(FAST_RSQRT(r_squared + soft_squared));
+                    
+                    acc.ax += ai * rx;
+                    acc.ay += ai * ry;
+                    acc.az += ai * rz;
+                } else {
+                    for (int i = 0; i < 2; i++){
+                        for (int j = 0; j < 2; j++){
+                            for (int k = 0; k < 2; k++) {
+                                Octotree *c = node->child[i][j][k];
+
+                                if (c->n > 0)
+                                    stack[h++] = c;
+                            }
                         }
                     }
                 }
             }
         }
+
+        delete[] stack;
+
     }
     /* getters: encapsulation in oop is nonsense
      * just a pedantic feature that overcomplicates
@@ -193,19 +229,16 @@ public :
      * correcteness of the software is programmer's 
      * responsability.
      */
-    int getDepth() const { return depth; }
 
     int getN() const { return n; }
 
-    bool isEmpty() const { return empty; }
+    float getTotalMass() const { return m; }
 
-    T getTotalMass() const { return total_m; }
+    float getCMX() const { return cmx; }
 
-    T getCMX() const { return cmx; }
+    float getCMY() const { return cmy; }
 
-    T getCMY() const { return cmy; }
-
-    T getCMZ() const { return cmz; }
+    float getCMZ() const { return cmz; }
 };
 
 #endif

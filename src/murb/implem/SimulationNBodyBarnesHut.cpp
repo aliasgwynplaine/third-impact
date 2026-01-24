@@ -18,6 +18,7 @@ SimulationNBodyBarnesHut::SimulationNBodyBarnesHut(const unsigned long nBodies, 
 void SimulationNBodyBarnesHut::initIteration()
 {
     const std::vector<dataAoS_t<float>> &d = this->getBodies().getDataAoS();
+    const unsigned long N = this->getBodies().getN();
     float xmin, ymin, zmin;
     float xmax, ymax, zmax;
 
@@ -29,7 +30,7 @@ void SimulationNBodyBarnesHut::initIteration()
     this->accelerations[0].ay = 0.f;
     this->accelerations[0].az = 0.f;
 
-    for (unsigned long iBody = 1; iBody < this->getBodies().getN(); iBody++) {
+    for (unsigned long iBody = 1; iBody < N; iBody++) {
         this->accelerations[iBody].ax = 0.f;
         this->accelerations[iBody].ay = 0.f;
         this->accelerations[iBody].az = 0.f;
@@ -43,20 +44,21 @@ void SimulationNBodyBarnesHut::initIteration()
         zmax = zmax >= d[iBody].qz ? zmax : d[iBody].qz;
     }
 
-    this->root = new Octotree<float>(xmin, ymin, zmin, xmax, ymax, zmax, 0, theta);
+    this->root = new Octotree(xmin, ymin, zmin, xmax, ymax, zmax, theta);
 }
 
 void SimulationNBodyBarnesHut::computeBodiesAcceleration()
 {
     const std::vector<dataAoS_t<float>> &d = this->getBodies().getDataAoS();
+    const unsigned long N = this->getBodies().getN();
     
-    for (unsigned long iBody = 0; iBody < this->getBodies().getN(); iBody++) {
+    for (unsigned long iBody = 0; iBody < N; iBody++) {
         this->root->insert(iBody, d[iBody].m, d[iBody].qx, d[iBody].qy, d[iBody].qz);
     }
 
-    this->root->computeMass();
+    this->root->computeCM();
 
-    for (unsigned long iBody = 0; iBody < this->getBodies().getN(); iBody++) {
+    for (unsigned long iBody = 0; iBody < N; iBody++) {
         this->root->computeAcc(d[iBody].qx, d[iBody].qy, d[iBody].qz, soft, G, this->accelerations[iBody]);
     }
 }

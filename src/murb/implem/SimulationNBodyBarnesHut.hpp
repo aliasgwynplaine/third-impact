@@ -9,7 +9,7 @@
 class SimulationNBodyBarnesHut : public SimulationNBodyInterface {
   protected:
     std::vector<accAoS_t<float>> accelerations; /*!< Array of body acceleration structures. */
-    Octotree<float> *root;
+    Octotree *root;
     const float theta;
 
   public:
