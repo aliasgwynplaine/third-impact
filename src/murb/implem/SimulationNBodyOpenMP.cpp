@@ -13,7 +13,7 @@ SimulationNBodyOpenMP::SimulationNBodyOpenMP(const unsigned long nBodies, const 
     : SimulationNBodyInterface(nBodies, scheme, soft, randInit)
 {
     float N = (float)this->getBodies().getN();
-    this->flopsPerIte = 0.5f * 27.f * ((N - 1) * (N - 2));
+    this->flopsPerIte = 0.5f * 30.f * ((N - 1) * (N - 2)) + 1.f;
     this->accelerations.resize(this->getBodies().getN());
     initIteration();
 }
@@ -56,9 +56,9 @@ void SimulationNBodyOpenMP::computeBodiesAcceleration()
             float rijz = d[jBody].qz - iqz; // 1 flop
 
             // compute the || rij ||² + e²
-            float rijSquared_softSquared = SQUARE(rijx) + SQUARE(rijy) + SQUARE(rijz) + softSquared; // 7 flops
+            float rijSquared_softSquared = SQUARE(rijx) + SQUARE(rijy) + SQUARE(rijz) + softSquared; // 6 flops
             // compute G / (|| rij ||² + e²)^{3/2}
-            float Gxinvrps = lG * POW3(FAST_RSQRT(rijSquared_softSquared)); // 2 flops
+            float Gxinvrps = lG * POW3(FAST_RSQRT(rijSquared_softSquared)); // 4 flops
             // compute the acceleration value between body i and body j: || ai || = G.mj / (|| rij ||² + e²)^{3/2}
             float ai = Gxinvrps * d[jBody].m; // 1 flops
             // compute the acceleration value between body j and body i: || aj || = G.mi / (|| rij ||² + e²)^{3/2}
@@ -74,16 +74,16 @@ void SimulationNBodyOpenMP::computeBodiesAcceleration()
             acc_priv[jBody].az -= aj * rijz; // 2 flops
         }
 
-        acc_priv[iBody].ax += acc.ax;
-        acc_priv[iBody].ay += acc.ay;
-        acc_priv[iBody].az += acc.az;
+        acc_priv[iBody].ax += acc.ax; // 1 flop
+        acc_priv[iBody].ay += acc.ay; // 1 flop
+        acc_priv[iBody].az += acc.az; // 1 flop
     }
 
     #pragma omp critical
     for (unsigned long i = 0; i < N; i++) {
-        laccelerations[i].ax += acc_priv[i].ax;
-        laccelerations[i].ay += acc_priv[i].ay;
-        laccelerations[i].az += acc_priv[i].az;
+        laccelerations[i].ax += acc_priv[i].ax; // 1 flop
+        laccelerations[i].ay += acc_priv[i].ay; // 1 flop
+        laccelerations[i].az += acc_priv[i].az; // 1 flop
     }
 
     free(acc_priv);

@@ -111,9 +111,9 @@ struct Octotree {
     }
 
 
-    void computeCM()
+    int computeCM()
     {
-        if (n == 0) return;
+        if (n == 0) return 0;
 
         struct octostack *stack = new struct octostack[n];
         int h = 0; // height of the stack
@@ -121,6 +121,8 @@ struct Octotree {
         stack[h] = {this, false};
 
         struct octostack curr;
+
+        int flops = 0;
 
         while (h > 0) {
             curr = stack[--h];
@@ -154,57 +156,69 @@ struct Octotree {
 
                             if (c->n == 0) continue;
                             
-                            node->cmx += c->cmx * c->m;
-                            node->cmy += c->cmy * c->m;
-                            node->cmz += c->cmz * c->m;
+                            node->cmx += c->cmx * c->m; // 2 flops
+                            node->cmy += c->cmy * c->m; // 2 flops
+                            node->cmz += c->cmz * c->m; // 2 flops
+
+                            flops += 6;
                         }
                     }
                 }
 
-                float inv_m = 1.f / node->m;
-                node->cmx *= inv_m;
-                node->cmy *= inv_m;
-                node->cmz *= inv_m;
+                float inv_m = 1.f / node->m; // 1 flops
+                node->cmx *= inv_m;          // 1 flops
+                node->cmy *= inv_m;          // 1 flops
+                node->cmz *= inv_m;          // 1 flops
+
+                flops += 4;
             }
         }
         delete[] stack;
+        
+        return flops;
     }
 
-    void computeAcc(const float &ix, const float &iy, const float &iz, 
+    int computeAcc(const float &ix, const float &iy, const float &iz, 
         const float &soft, const float &G, accAoS_t<float> &acc)
     {
-        if (n == 0) return;
+        if (n == 0) return 0;
 
         Octotree **stack = new Octotree*[n];
         int h = 0;
         stack[h++] = this;
+
+        int flops = 0;
 
         while (h > 0) {
             Octotree *node = stack[--h];
 
             if (node->n == 0) continue;
 
-            const float rx = node->cmx - ix;
-            const float ry = node->cmy - iy;
-            const float rz = node->cmz - iz;
+            const float rx = node->cmx - ix;  // 1 flops
+            const float ry = node->cmy - iy;  // 1 flops
+            const float rz = node->cmz - iz;  // 1 flops
 
-            const float r_squared = rx * rx + ry * ry + rz * rz;
-            const float soft_squared = soft * soft;
+            const float r_squared = rx * rx + ry * ry + rz * rz; // 5 flops
+            const float soft_squared = soft * soft; // 1 flop
+
+            flops += 9;
 
             if (node->n == 1) {
-                const float ai = G * node->m * POW3(FAST_RSQRT(r_squared + soft_squared));
-                acc.ax += ai * rx;
-                acc.ay += ai * ry;
-                acc.az += ai * rz;
+                const float ai = G * node->m * POW3(FAST_RSQRT(r_squared + soft_squared)); // 5 flop
+                acc.ax += ai * rx; // 2 flops
+                acc.ay += ai * ry; // 2 flops
+                acc.az += ai * rz; // 2 flops
+                flops += 11;
             } else {
-                const float r = r_squared * FAST_RSQRT(r_squared);
+                const float r = r_squared * FAST_RSQRT(r_squared); // 2 flops
     
                 if (node->size / r < node->theta) {
-                    const float ai = G * node->m * POW3(FAST_RSQRT(r_squared + soft_squared));
+                    const float ai = G * node->m * POW3(FAST_RSQRT(r_squared + soft_squared)); // 5 flops
                     
-                    acc.ax += ai * rx;
-                    acc.ay += ai * ry;
-                    acc.az += ai * rz;
+                    acc.ax += ai * rx; // 2 flops
+                    acc.ay += ai * ry; // 2 flops
+                    acc.az += ai * rz; // 2 flops
+                    flops += 13;
                 } else {
                     for (int i = 0; i < 2; i++){
                         for (int j = 0; j < 2; j++){
@@ -222,6 +236,69 @@ struct Octotree {
 
         delete[] stack;
 
+        return flops;
+    }
+
+
+    int computeAcc(const float &ix, const float &iy, const float &iz, 
+        const float &soft, const float &G, float &iax, float &iay, float &iaz)
+    {
+        if (n == 0) return 0;
+
+        Octotree **stack = new Octotree*[n];
+        int h = 0;
+        stack[h++] = this;
+
+        int flops = 0;
+
+        while (h > 0) {
+            Octotree *node = stack[--h];
+
+            if (node->n == 0) continue;
+
+            const float rx = node->cmx - ix;  // 1 flops
+            const float ry = node->cmy - iy;  // 1 flops
+            const float rz = node->cmz - iz;  // 1 flops
+
+            const float r_squared = rx * rx + ry * ry + rz * rz; // 5 flops
+            const float soft_squared = soft * soft; // 1 flop
+
+            flops += 9;
+
+            if (node->n == 1) {
+                const float ai = G * node->m * POW3(FAST_RSQRT(r_squared + soft_squared)); // 5 flop
+                iax += ai * rx; // 2 flops
+                iay += ai * ry; // 2 flops
+                iaz += ai * rz; // 2 flops
+                flops += 11;
+            } else {
+                const float r = r_squared * FAST_RSQRT(r_squared); // 2 flops
+    
+                if (node->size / r < node->theta) {
+                    const float ai = G * node->m * POW3(FAST_RSQRT(r_squared + soft_squared)); // 5 flops
+                    
+                    iax += ai * rx; // 2 flops
+                    iay += ai * ry; // 2 flops
+                    iaz += ai * rz; // 2 flops
+                    flops += 13;
+                } else {
+                    for (int i = 0; i < 2; i++){
+                        for (int j = 0; j < 2; j++){
+                            for (int k = 0; k < 2; k++) {
+                                Octotree *c = node->child[i][j][k];
+
+                                if (c->n > 0)
+                                    stack[h++] = c;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        delete[] stack;
+
+        return flops;
     }
     /* getters: encapsulation in oop is nonsense
      * just a pedantic feature that overcomplicates

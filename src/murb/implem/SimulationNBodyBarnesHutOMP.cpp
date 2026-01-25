@@ -11,7 +11,7 @@ SimulationNBodyBarnesHutOMP::SimulationNBodyBarnesHutOMP(const unsigned long nBo
                                            const unsigned long randInit, const float theta)
     : SimulationNBodyInterface(nBodies, scheme, soft, randInit), theta(theta)
 {
-    this->flopsPerIte = 20.f * (float)this->getBodies().getN() * (float)this->getBodies().getN();
+    this->flopsPerIte = 20.f * (float)this->getBodies().getN() * std::log((float)this->getBodies().getN());
     this->accelerations.resize(this->getBodies().getN());
 }
 

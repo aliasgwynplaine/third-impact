@@ -13,7 +13,7 @@ SimulationNBodyOptim::SimulationNBodyOptim(const unsigned long nBodies, const st
     : SimulationNBodyInterface(nBodies, scheme, soft, randInit)
 {
     float N = (float)this->getBodies().getN();
-    this->flopsPerIte = 0.5f * 27.f * ((N - 1) * (N - 2));
+    this->flopsPerIte = 0.5f * 27.f * ((N - 1) * (N - 2)) + 1.f;
     this->accelerations.resize(this->getBodies().getN());
 }
 
@@ -51,9 +51,9 @@ void SimulationNBodyOptim::computeBodiesAcceleration()
             float rijz = d[jBody].qz - iqz; // 1 flop
 
             // compute the || rij ||² + e²
-            float rijSquared_softSquared = SQUARE(rijx) + SQUARE(rijy) + SQUARE(rijz) + softSquared; // 7 flops
+            float rijSquared_softSquared = SQUARE(rijx) + SQUARE(rijy) + SQUARE(rijz) + softSquared; // 6 flops
             // compute G / (|| rij ||² + e²)^{3/2}
-            float Gxinvrps = lG * POW3(FAST_RSQRT(rijSquared_softSquared)); // 2 flops
+            float Gxinvrps = lG * POW3(FAST_RSQRT(rijSquared_softSquared)); // 4 flops
             // compute the acceleration value between body i and body j: || ai || = G.mj / (|| rij ||² + e²)^{3/2}
             float ai = Gxinvrps * d[jBody].m; // 1 flops
             // compute the acceleration value between body j and body i: || aj || = G.mi / (|| rij ||² + e²)^{3/2}

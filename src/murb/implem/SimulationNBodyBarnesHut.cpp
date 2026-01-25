@@ -11,7 +11,7 @@ SimulationNBodyBarnesHut::SimulationNBodyBarnesHut(const unsigned long nBodies, 
                                            const unsigned long randInit, const float theta)
     : SimulationNBodyInterface(nBodies, scheme, soft, randInit), theta(theta)
 {
-    this->flopsPerIte = 20.f * (float)this->getBodies().getN() * (float)this->getBodies().getN();
+    this->flopsPerIte = 20.f * (float)this->getBodies().getN() * std::log2((float)this->getBodies().getN());
     this->accelerations.resize(this->getBodies().getN());
 }
 
@@ -56,10 +56,10 @@ void SimulationNBodyBarnesHut::computeBodiesAcceleration()
         this->root->insert(iBody, d[iBody].m, d[iBody].qx, d[iBody].qy, d[iBody].qz);
     }
 
-    this->root->computeCM();
+    flopsPerIte = this->root->computeCM();
 
     for (unsigned long iBody = 0; iBody < N; iBody++) {
-        this->root->computeAcc(d[iBody].qx, d[iBody].qy, d[iBody].qz, soft, G, this->accelerations[iBody]);
+        flopsPerIte += this->root->computeAcc(d[iBody].qx, d[iBody].qy, d[iBody].qz, soft, G, this->accelerations[iBody]);
     }
 }
 
